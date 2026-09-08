@@ -85,6 +85,17 @@ namespace Client.Scenes.Views
         // ！ 参数化短距离怪物检测距离
         private const int SHORT_DISTANCE_DETECTION_RANGE = 9; // 战斗模式的怪物检测范围（格）
 
+        // ！ 修复：开关型/被动型/特殊准备型技能不能作为挂机技能——UseMagic 对它们只切换状态或无操作，
+        // 不会产生攻击行为，误选后挂机角色会站桩不攻击。用于技能下拉框过滤和 TryAutoSkill 兜底校验。
+        public static readonly HashSet<MagicType> NonAutoSkillMagics = new HashSet<MagicType>
+        {
+            MagicType.Swordsmanship, MagicType.SpiritSword, MagicType.WillowDance, MagicType.VineTreeDance,
+            MagicType.Thrusting, MagicType.HalfMoon, MagicType.FlamingSword, MagicType.DragonRise,
+            MagicType.BladeStorm, MagicType.DemonicRecovery, MagicType.DestructiveSurge, MagicType.Endurance,
+            MagicType.FlameSplash,
+            MagicType.FullBloom, MagicType.WhiteLotus, MagicType.RedLotus, MagicType.SweetBrier, MagicType.Karma
+        };
+
         public DateTime ProtectTime
         {
             get
@@ -987,7 +998,11 @@ namespace Client.Scenes.Views
 
                 if (Config.开始挂机)
                 {
-                    PathFinderTime = CEnvir.Now.AddSeconds(2.0);
+                    // ！ 修复：仅当目标进入战斗范围（9格）时才推迟寻路计时
+                    // 否则目标在 9~25 格时 ChangeAutoFightLocation 会被 PathFinderTime 永久拦截，
+                    // 角色既不寻路也不放技能（站桩），远程职业失去远程优势，被动怪场景会永久卡死
+                    if (Functions.InRange(MapObject.TargetObject.CurrentLocation, User.CurrentLocation, SHORT_DISTANCE_DETECTION_RANGE))
+                        PathFinderTime = CEnvir.Now.AddSeconds(2.0);
                     // ！ 改进：使用"远程技能挂机"配置项替代职业判断
                     // if (Config.自动躲避 && ((User.Class == MirClass.Wizard || User.Class == MirClass.Taoist) && (double)Functions.Distance(MapObject.User.CurrentLocation, MapObject.TargetObject.CurrentLocation) < 18.0))
                     if (Config.自动躲避 && (Config.是否远战挂机 && (double)Functions.Distance(MapObject.User.CurrentLocation, MapObject.TargetObject.CurrentLocation) < 18.0))
@@ -1029,9 +1044,10 @@ namespace Client.Scenes.Views
                     //  if ((User.Class == MirClass.Taoist || User.Class == MirClass.Wizard) && Functions.InRange(MapObject.TargetObject.CurrentLocation, User.CurrentLocation, SHORT_DISTANCE_DETECTION_RANGE))
                     if (Config.是否远战挂机 && Functions.InRange(MapObject.TargetObject.CurrentLocation, User.CurrentLocation, SHORT_DISTANCE_DETECTION_RANGE))
                     {
-                        if (Config.远战挂机是否使用技能)
-                            TryAutoSkill();
-                        return;
+                        // ！ 修复：TryAutoSkill 返回 false（技能未配置或为开关型技能）时不拦截，
+                        // 继续走下方的普通攻击流程，避免挂机角色站桩不攻击
+                        if (Config.远战挂机是否使用技能 && TryAutoSkill())
+                            return;
                     }
                 }
 
@@ -1086,8 +1102,12 @@ namespace Client.Scenes.Views
 
                 if (Config.范围挂机)
                 {
-                    x = CEnvir.Random.Next(Math.Max((int)(Config.范围挂机坐标.X - Config.范围距离), 0), Math.Min((int)(Config.范围挂机坐标.X + Config.范围距离), GameScene.Game.MapControl.Width - 1));
-                    y = CEnvir.Random.Next(Math.Max((int)(Config.范围挂机坐标.Y - Config.范围距离), 0), Math.Min((int)(Config.范围挂机坐标.Y + Config.范围距离), GameScene.Game.MapControl.Height - 1));
+                    // ！ 修复：先将挂机中心点钳制到地图范围内，避免坐标越界时 Random.Next(min > max) 抛异常导致游戏崩溃
+                    int centerX = Math.Min(Math.Max((int)Config.范围挂机坐标.X, 0), GameScene.Game.MapControl.Width - 1);
+                    int centerY = Math.Min(Math.Max((int)Config.范围挂机坐标.Y, 0), GameScene.Game.MapControl.Height - 1);
+                    int range = (int)Config.范围距离;
+                    x = CEnvir.Random.Next(Math.Max(centerX - range, 0), Math.Min(centerX + range, GameScene.Game.MapControl.Width - 1));
+                    y = CEnvir.Random.Next(Math.Max(centerY - range, 0), Math.Min(centerY + range, GameScene.Game.MapControl.Height - 1));
                 }
                 else
                 {
@@ -2059,17 +2079,12 @@ namespace Client.Scenes.Views
                 if (Config.范围挂机)
                 {
                     // ！ 改进：范围挂机使用有效的寻路目标
-                    Random random1 = CEnvir.Random;
-                    int minValue1 = (int)((long)Config.范围挂机坐标.X - Config.范围距离);
-                    Point androidCoord = Config.范围挂机坐标;
-                    int maxValue1 = (int)((long)androidCoord.X + Config.范围距离);
-                    x = random1.Next(minValue1, maxValue1);
-                    Random random2 = CEnvir.Random;
-                    androidCoord = Config.范围挂机坐标;
-                    int minValue2 = (int)((long)androidCoord.Y - Config.范围距离);
-                    androidCoord = Config.范围挂机坐标;
-                    int maxValue2 = (int)((long)androidCoord.Y + Config.范围距离);
-                    y = random2.Next(minValue2, maxValue2);
+                    // ！ 修复：先将挂机中心点钳制到地图范围内，避免生成越界目标点导致寻路永远失败（角色原地不动）
+                    int centerX = Math.Min(Math.Max((int)Config.范围挂机坐标.X, 0), Width - 1);
+                    int centerY = Math.Min(Math.Max((int)Config.范围挂机坐标.Y, 0), Height - 1);
+                    int range = (int)Config.范围距离;
+                    x = CEnvir.Random.Next(Math.Max(centerX - range, 0), Math.Min(centerX + range, Width - 1));
+                    y = CEnvir.Random.Next(Math.Max(centerY - range, 0), Math.Min(centerY + range, Height - 1));
                     PathFinderTime = CEnvir.Now.AddSeconds(8.0);
                 }
                 else if (Config.是否开启随机保护)
@@ -2283,14 +2298,14 @@ namespace Client.Scenes.Views
 
                     if (Functions.InRange(GameScene.Game.TargetObject.CurrentLocation, User.CurrentLocation, SHORT_DISTANCE_DETECTION_RANGE))
                     {
-                        var autoMagic = GameScene.Game.GetMagic(Config.挂机自动技能);
-                        // string debugMsg = $"[AutoSkill] Config.挂机自动技能={Config.挂机自动技能}, MagicObj={(autoMagic == null ? "null" : ($"Type={autoMagic.Info.Magic}, Name={autoMagic.Info.Name}, Level={autoMagic.Level}"))}";
-                        // GameScene.Game.ReceiveChat(debugMsg, MessageType.Hint);
-                        GameScene.Game.UseMagic(Config.挂机自动技能);
-                        return;
+                        // ！ 修复：TryAutoSkill 返回 false（技能未配置或为开关型技能）时不拦截，
+                        // 继续走下方的普通攻击流程，避免挂机角色站桩不攻击
+                        if (TryAutoSkill())
+                            return;
                     }
 
-                    GameScene.Game.TargetObject = null;
+                    else
+                        GameScene.Game.TargetObject = null;
                 }
 
                 if (Functions.Distance(User.CurrentLocation, GameScene.Game.TargetObject.CurrentLocation) == 1 && CEnvir.Now > User.AttackTime && User.Horse == HorseType.None)
@@ -2463,24 +2478,30 @@ namespace Client.Scenes.Views
         /// <summary>
         /// 挂机技能方法改动
         /// 当且仅当施法列队为空才将技能放入列队，避免打断其他动作
+        /// ！ 修复：返回 bool 表示本次行动是否已被技能流程占用；
+        /// 返回 false（技能未配置或为开关/被动型技能）时调用方应回退到普通攻击，避免站桩
         /// </summary>
-        private void TryAutoSkill()
+        private bool TryAutoSkill()
         {
-            if (Config.挂机自动技能 == MagicType.None) return;
+            // 配置为空或为开关/被动型技能时视为不可用
+            if (Config.挂机自动技能 == MagicType.None || NonAutoSkillMagics.Contains(Config.挂机自动技能))
+                return false;
 
-            if (CEnvir.Now < _nextAutoSkillTime) return;
+            // 以下三种情况视为"本次行动已被技能流程占用"，调用方不应转而平砍
+            if (CEnvir.Now < _nextAutoSkillTime) return true;
 
             // 如果队列不为空返回
-            if (MapObject.User.ActionQueue != null && MapObject.User.ActionQueue.Count > 0) return;
+            if (MapObject.User.ActionQueue != null && MapObject.User.ActionQueue.Count > 0) return true;
 
             // 当有技能正在施法返回
-            if (MapObject.User.MagicAction != null) return;
+            if (MapObject.User.MagicAction != null) return true;
 
             // 只有当前未施法，并且队列为空时，才插入自动技能
             GameScene.Game.UseMagic(Config.挂机自动技能);
 
             // 增加施法延迟，增加容错量（游戏无施法加速默认是500ms，这里给600，100毫秒headroom不影响挂机效率但是增加大量的容错
             _nextAutoSkillTime = CEnvir.Now.AddMilliseconds(600);
+            return true;
         }
         #endregion
 

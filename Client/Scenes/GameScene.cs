@@ -1229,19 +1229,22 @@ namespace Client.Scenes
             {
                 case MirClass.Wizard:
                 case MirClass.Taoist:
+                    // ！ 修复：仅在目标为空或死亡时重新选怪。
+                    // 原逻辑在目标超出施法范围时也重新选怪，但 SelectMonsterTarget 会排除当前目标，
+                    // 常返回更远的怪或 null，导致目标丢失/在多只远怪间跳变，角色永远无法接近目标。
+                    // 超射程目标应保留，交由挂机寻路（ChangeAutoFightLocation）接近。
                     if (Config.远战挂机是否使用技能
-                        && (TargetObject == null 
-                        || TargetObject.Dead 
-                        || Functions.Distance(TargetObject.CurrentLocation, User.CurrentLocation) > Globals.MagicRange))
+                        && (TargetObject == null || TargetObject.Dead))
                     {
-
                         TargetObject = MapControl.SelectMonsterTarget(TargetObject);
-
-                        if (TargetObject != null)
-                            Game.MapControl.AutoPath = false;
 
                         MouseObject = TargetObject;
                     }
+
+                    // ！ 修复：仅当目标进入施法范围后才停止寻路；目标在射程外时保留 AutoPath 以接近目标
+                    if (TargetObject != null
+                        && Functions.InRange(TargetObject.CurrentLocation, User.CurrentLocation, Globals.MagicRange))
+                        Game.MapControl.AutoPath = false;
 
                     break;
 

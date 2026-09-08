@@ -2907,6 +2907,13 @@ namespace Client.Scenes.Views
                     dxListBoxItem2.Parent = CombSkill2.ListBox;
                     dxListBoxItem2.Label.Text = clientUserMagic.Info.Name;
                     dxListBoxItem2.Item = (object)clientUserMagic.Info.Magic;
+
+                    // ！ 修复：开关型/被动型技能不能作为挂机技能（只会切换状态不会产生攻击），
+                    // 从挂机技能下拉框中排除，防止误选后挂机角色站桩不攻击
+                    // 注：不影响自动技能1/2 下拉框（定时开关型技能是有意义的）
+                    if (MapControl.NonAutoSkillMagics.Contains(clientUserMagic.Info.Magic))
+                        continue;
+
                     DXListBoxItem dxListBoxItem3 = new DXListBoxItem();
                     dxListBoxItem3.Parent = AndroidSkills.ListBox;
                     dxListBoxItem3.Label.Text = clientUserMagic.Info.Name;
@@ -2916,6 +2923,13 @@ namespace Client.Scenes.Views
                 CombSkill2.ListBox.SelectItem((object)Config.自动技能2);
                 
                 // 根据"远战挂机是否使用技能"配置选择合适的选项
+                // ！ 修复：旧配置中保存的开关/被动型技能无法作为挂机技能，加载时重置为"不使用技能"
+                if (Config.挂机自动技能 != MagicType.None && MapControl.NonAutoSkillMagics.Contains(Config.挂机自动技能))
+                {
+                    Config.远战挂机是否使用技能 = false;
+                    Config.挂机自动技能 = MagicType.None;
+                }
+
                 if (!Config.远战挂机是否使用技能 || Config.挂机自动技能 == MagicType.None)
                 {
                     AndroidSkills.ListBox.SelectItem(null); // 选择"不使用技能"
