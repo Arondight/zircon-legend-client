@@ -898,7 +898,9 @@ namespace Client.Scenes.Views
                 {
                     if (obj == null || obj.Dead || obj == User) continue;
                     if (obj.Race != ObjectType.Monster || !string.IsNullOrEmpty(obj.PetOwner)) continue;
-                    
+                    // ！ 修复：跳过 AI<0 的不可攻击怪（如木桩/看板怪），与 SelectMonster 的 CanAttackTarget 标准一致
+                    if (((MonsterObject)obj).MonsterInfo.AI < 0) continue;
+
                     int distance = Functions.Distance(User.CurrentLocation, obj.CurrentLocation);
                     if (distance < closestDistance)
                     {
@@ -1910,7 +1912,9 @@ namespace Client.Scenes.Views
             {
                 if (obj == null || obj.Dead || obj == User) continue;
                 if (obj.Race != ObjectType.Monster || !string.IsNullOrEmpty(obj.PetOwner)) continue;
-                
+                // ！ 修复：跳过 AI<0 的不可攻击怪，与 SelectMonster 的 CanAttackTarget 标准一致
+                if (((MonsterObject)obj).MonsterInfo.AI < 0) continue;
+
                 int distance = Functions.Distance(User.CurrentLocation, obj.CurrentLocation);
                 
                 // 只选择距离大于0的怪物（避免重叠的怪物）
@@ -1983,6 +1987,14 @@ namespace Client.Scenes.Views
 
                 float distance = (float)Functions.Distance(userLoc, clientObjectData.Location);
                 if (distance > 20.0f) continue; // 只考虑30格内的怪物
+
+                // ！ 修复：范围挂机时只统计挂机范围内的怪物，避免密集区把角色引出挂机范围
+                if (Config.范围挂机)
+                {
+                    int dx = Math.Abs(clientObjectData.Location.X - (int)Config.范围挂机坐标.X);
+                    int dy = Math.Abs(clientObjectData.Location.Y - (int)Config.范围挂机坐标.Y);
+                    if (dx > Config.范围距离 || dy > Config.范围距离) continue;
+                }
 
                 // 将怪物位置按5x5格区域分组统计密度
                 int gridX = clientObjectData.Location.X / 5;
@@ -2495,6 +2507,17 @@ namespace Client.Scenes.Views
 
             // 当有技能正在施法返回
             if (MapObject.User.MagicAction != null) return true;
+
+            // ！ 修复#9：挂机时确保 MagicObject 指向当前目标，避免首发技能因 MagicObject 为 null/旧目标而打空
+            // （AndroidProcess 设置 MagicObject 与 TryAutoSkill 在 ProcessInput 中互斥，首次锁定目标时 MagicObject 可能未更新）
+            if (Config.开始挂机 && MapObject.TargetObject != null && !MapObject.TargetObject.Dead)
+                MapObject.MagicObject = MapObject.TargetObject;
+
+            // ！ 修复#10：预检技能冷却和魔法值，避免 UseMagic 内部每秒刷"该技能仍在冷却/没有足够的魔法值"提示
+            var autoMagic = GameScene.Game.GetMagic(Config.挂机自动技能);
+            if (autoMagic == null) return false;
+            if (CEnvir.Now < autoMagic.NextCast) return true;   // 冷却中：等待不刷屏
+            if (autoMagic.Cost > MapObject.User.CurrentMP) return true;   // 蓝不足：等待不刷屏
 
             // 只有当前未施法，并且队列为空时，才插入自动技能
             GameScene.Game.UseMagic(Config.挂机自动技能);

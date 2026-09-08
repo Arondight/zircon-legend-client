@@ -46,6 +46,9 @@ namespace Client.Scenes.Views
         public DateTime AutoSkillsTime { get; set; } = DateTime.MinValue;
         private bool _pausedAutoHangupForHeal = false;
 
+        // ！ 修复：死亡回城节流时间戳，避免死亡期间每帧发 TownRevive 包
+        private DateTime _lastTownReviveTime = DateTime.MinValue;
+
         public override WindowType Type
         {
             get
@@ -635,6 +638,8 @@ namespace Client.Scenes.Views
                 if ((double)GameScene.Game.User.CurrentHP > (double)GameScene.Game.User.Stats[Stat.Health] * 0.5)
                 {
                     Config.开始挂机 = true; // 恢复挂机，仅在暂停的情况下恢复
+                    // ！ 修复：同步 UI 复选框状态，避免用户看到复选框勾选但实际未挂机
+                    if (Helper?.AndroidPlayer != null) Helper.AndroidPlayer.Checked = true;
                     _pausedAutoHangupForHeal = false;
                 }
             }
@@ -674,6 +679,8 @@ namespace Client.Scenes.Views
                             // 挂机暂停
                             GameScene.Game.ReceiveChat("血量低于50，隐身治疗，并暂停挂机（强制停止行为）", MessageType.Hint);
                             Config.开始挂机 = false;
+                            // ！ 修复：同步 UI 复选框状态，避免用户看到复选框勾选但实际已暂停
+                            if (Helper?.AndroidPlayer != null) Helper.AndroidPlayer.Checked = false;
                             _pausedAutoHangupForHeal = true;
                             // 强制清理当前目标、寻路与动作队列，立即停止移动/攻击
                             PerformHardPause();
@@ -839,8 +846,12 @@ namespace Client.Scenes.Views
             if (!Config.开始挂机)
                 return;
 
-            if (GameScene.Game.User.Dead && Config.死亡回城)
+            if (GameScene.Game.User.Dead && Config.死亡回城 && CEnvir.Now > _lastTownReviveTime)
+            {
+                // ！ 修复：3秒节流，避免死亡期间每帧发 TownRevive 包
                 CEnvir.Enqueue(new TownRevive());
+                _lastTownReviveTime = CEnvir.Now.AddSeconds(3.0);
+            }
 
             if (Config.是否开启每间隔自动随机 && CEnvir.Now > _ProtectTime)
             {
@@ -2484,6 +2495,12 @@ namespace Client.Scenes.Views
                         if (GameScene.Game.User.AutoTime == 0L)
                         {
                             AndroidPlayer.Checked = false;
+                        }
+                        // ！ 修复：不允许挂机的地图拒绝从 UI 开启挂机（与快捷键路径 GameScene.cs:1808 一致）
+                        else if (GameScene.Game.MapControl?.MapInfo != null && !GameScene.Game.MapControl.MapInfo.AllowRT)
+                        {
+                            AndroidPlayer.Checked = false;
+                            GameScene.Game.ReceiveChat("目前您在不允许使用自动打怪功能的地图，因此不能挂机", MessageType.System);
                         }
                         else
                         {

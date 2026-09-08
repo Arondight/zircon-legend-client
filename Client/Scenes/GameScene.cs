@@ -5830,8 +5830,20 @@ namespace Client.Scenes
             //else
             {
                 if (MapControl.MapInfo.AllowRT)
+                {
                     if (!BigPatchBox.Helper.AndroidPlayer.Visible)
                         BigPatchBox.Helper.AndroidPlayer.Visible = true;
+                }
+                else
+                {
+                    // ！ 修复：不允许挂机的地图隐藏复选框并强制关闭挂机
+                    // 原逻辑只确保 AllowRT=true 时可见，未处理 AllowRT=false 时已显示的复选框，
+                    // 导致切换到禁挂机地图后仍可从 UI 开启挂机
+                    if (BigPatchBox.Helper.AndroidPlayer.Visible)
+                        BigPatchBox.Helper.AndroidPlayer.Visible = false;
+                    if (BigPatchBox.Helper.AndroidPlayer.Checked)
+                        BigPatchBox.Helper.AndroidPlayer.Checked = false;
+                }
             }
         }
         public void AutoGuajiChanged()
