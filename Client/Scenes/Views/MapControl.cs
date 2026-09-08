@@ -81,6 +81,9 @@ namespace Client.Scenes.Views
         
         private DateTime _lastAutoStateChangeTime = DateTime.MinValue;
         private const double STATE_CHANGE_DELAY = 1.0; // 1秒延迟
+
+        // ！ 修复：AutoWalkPath 长距离模式 FindMonsterDenseArea 节流时间戳，避免每帧 O(N)+字典分配
+        private DateTime _lastDenseAreaCheckTime = DateTime.MinValue;
         
         // ！ 参数化短距离怪物检测距离
         private const int SHORT_DISTANCE_DETECTION_RANGE = 9; // 战斗模式的怪物检测范围（格）
@@ -964,6 +967,9 @@ namespace Client.Scenes.Views
                 bool flag = true;
                 
                 // 修改：自动四花只在战斗状态下执行
+                // ！ 注释：此处自动四花逻辑与 BigPatchDialog.CastFourFlowers（BigPatchDialog.cs:216-232）重复实现
+                // 区别：此处有战斗状态检查（CombatTime 10秒内），CastFourFlowers 无此检查（每帧调用）
+                // 维护时两处需同步修改
                 if (Config.自动四花 && CEnvir.Now < User.CombatTime.AddSeconds(10))
                 {
                     if (!User.Buffs.Any(x =>
@@ -1084,8 +1090,10 @@ namespace Client.Scenes.Views
                 // 距离为1则执行操作
                 if (targetDistance == 1 && CEnvir.Now > User.AttackTime && User.Horse == HorseType.None)
                 {
+                    // ！ 修复：复用 TryAutoSkill（含 None/黑名单/冷却/MP 检查），避免无效技能白调用
+                    // 返回值不用管：false 时不放技能，true 时放了技能，下方平砍照常执行（原语义不变）
                     if (Config.开始挂机 && (flag && User.Class == MirClass.Assassin && Functions.InRange(MapObject.TargetObject.CurrentLocation, User.CurrentLocation, SHORT_DISTANCE_DETECTION_RANGE)))
-                        GameScene.Game.UseMagic(Config.挂机自动技能);
+                        TryAutoSkill();
 
                     MapObject.User.AttemptAction(new ObjectAction(MirAction.Attack, Functions.DirectionFromPoint(MapObject.User.CurrentLocation, MapObject.TargetObject.CurrentLocation), MapObject.User.CurrentLocation, new object[3]
                     {
@@ -1122,6 +1130,8 @@ namespace Client.Scenes.Views
                 {
                     GameScene.Game.MapControl.CurrentPath = path;
                     GameScene.Game.MapControl.AutoPath = true;
+                    // ！ 修复：设置 2 秒冷却，避免路径走完后立即重寻（依赖 ChangeAutoFightLocation 兜底语义混乱）
+                    PathFinderTime = CEnvir.Now.AddSeconds(2.0);
                 }
             }
 
@@ -1737,6 +1747,8 @@ namespace Client.Scenes.Views
                 int valueOrDefault = index.GetValueOrDefault();
                 if (mapIndex == valueOrDefault & index.HasValue
                     && clientObjectData.ItemInfo == null
+                    // ！ 注释：硬编码排除 MonsterInfo.Index==16（新手村非攻击性小动物，如鸡/鹿）
+                    // 该怪物 AI>=0 但不应作为挂机目标，与下方 AI>=0 检查互补
                     && (clientObjectData.MonsterInfo != null && clientObjectData.MonsterInfo.Index != 16)
                     && !clientObjectData.Dead
                     && ((clientObjectData.MonsterInfo == null || !clientObjectData.Dead)
@@ -1797,6 +1809,8 @@ namespace Client.Scenes.Views
                             num1 = num7;
                             minob = clientObjectData;
                         }
+                        // ！ 注释（反编译残留）：此处对每个 9 格内怪物都 FindPath，nodeList 被反复覆盖，
+                        // 最终保留的路径未必对应最近怪（num1/minob 才是最近怪）。逻辑混乱但功能可用，大改风险高，暂保留原行为
                         if ((User.Class == MirClass.Assassin || (uint)User.Class <= 0U) && Functions.InRange(clientObjectData.Location, User.CurrentLocation, SHORT_DISTANCE_DETECTION_RANGE))
                         {
                             List<Node> path = PathFinder.FindPath(User.CurrentLocation, Functions.PointNearTarget(User.CurrentLocation, clientObjectData.Location, 1));
@@ -1986,7 +2000,7 @@ namespace Client.Scenes.Views
                 if (!string.IsNullOrEmpty(clientObjectData.PetOwner) || clientObjectData.MonsterInfo.AI < 0) continue;
 
                 float distance = (float)Functions.Distance(userLoc, clientObjectData.Location);
-                if (distance > 20.0f) continue; // 只考虑30格内的怪物
+                if (distance > 20.0f) continue; // 只考虑20格内的怪物
 
                 // ！ 修复：范围挂机时只统计挂机范围内的怪物，避免密集区把角色引出挂机范围
                 if (Config.范围挂机)
@@ -2409,8 +2423,10 @@ namespace Client.Scenes.Views
             else
             {
                 // ！ 新增：长距离移动时检查怪物，如果发现怪物则中断寻路切换到战斗模式
-                if (IsLongDistanceMode && Config.开始挂机)
+                // ！ 修复：每秒最多检查一次怪物密集区，避免每帧 FindMonsterDenseArea 的 O(N)+字典分配开销
+                if (IsLongDistanceMode && Config.开始挂机 && CEnvir.Now >= _lastDenseAreaCheckTime)
                 {
+                    _lastDenseAreaCheckTime = CEnvir.Now.AddSeconds(1.0);
                     Point monsterDenseArea = FindMonsterDenseArea();
                     if (!monsterDenseArea.IsEmpty)
                     {
@@ -2418,7 +2434,7 @@ namespace Client.Scenes.Views
                         AutoPath = false;
                         IsLongDistanceMode = false;
                         CurrentPath?.Clear();
-                        
+
                         // 立即触发怪物追踪
                         ChangeAutoFightLocation();
                         return;
