@@ -1,120 +1,127 @@
-# �ʯ������ -�ͻ��� Zircon Mir3 Client
+# 皓石传奇三 -客户端 Zircon Mir3 Client
 
-����Դ��Ŀ����ѧϰ��Ϸ��������ֹ�����Լ��Ƿ���;��
+本开源项目仅供学习游戏技术，禁止商用以及非法用途。
 
-**����Ŀ��վΪ [Gitee-��ʯ������](https://gitee.com/raphaelcheung/zircon-legend-client.git)������ƽ̨��Ϊ����
-�汾����ֻ������վ�ϣ�**
+**本项目主站为 [Github-晧石传奇三](https://github.com/raphaelcheung/zircon-legend-client.git)，其他平台均为镜像。
+版本发布只放在主站上！**
 
-## ��Ŀ����
+## 项目背景
 
-����Ŀ�Ӽ��� 2019 ������������ Zircon �汾��չ������
-Ϊ���Ͳ���ɱ����������������˿�ƽ̨��docker�İ汾��
-����ԭ�������������ҵ��� **DevExpress** ���Ҳ�֧�ֿ�ƽ̨��
-�����ͬ����һͬ�����ȥ�������ݿⱣ����ԭ�湤�߼��ݿɱ༭��
+本项目从吉米 2019 年流传出来的 Zircon 版本发展而来，
+为降低部署成本，将服务器做成了跨平台可docker的版本，
+由于原版服务器依赖商业组件 **DevExpress** 并且不支持跨平台，
+因此连同界面一同剥离出去，仅数据库保持与原版工具兼容可编辑。
 
-**ע�⣺LOMCN�� 2025 �귢�����°湤�������ع������ݿ⣬�޷����ݣ�ֻ�ܺ��ϰ汾���߼���**
+**注意：LOMCN上 2025 年发布的新版工具由于重构了数据库，无法兼容，只能和老版本工具兼容**
 
-���ñ���Ŀ�����а����ı����� **�����** ��ף�����귢��ƣ�
+觉得本项目对你有帮助的别忘了 **点个星** ，祝你年年发大财！
 
-�������������[QQȺ��915941142](https://qm.qq.com/q/JeoJOJ4z4e)��
+技术交流请进:
+【[QQ群①：915941142](https://qm.qq.com/q/JeoJOJ4z4e)】
+【[QQ群②：1076553894](https://qm.qq.com/cgi-bin/qm/qr?k=gfaKhTO0Di536wKhU-82xSPn9EYUX4m9&jump_from=webapi&authKey=S5EV6SGeS7yoiT8YNuSFg5EZWhcUK3JVPjwUIxBUtkihVP/S6jVQcKMt+BWkXtEo)】
 
-![ɨ���Ⱥ](Images/QQ%E7%BE%A4.jpg)
+![扫码加入①群](Images/IMG_1026.jpg)
+![扫码加入②群](Images/IMG_1025.jpg)
 
-## ��Ϸ���
+## 游戏简介
 
-### �����Ĵ�������Ϸ
+### 完整的传奇三游戏
 
-- �����ĸ�ְҵ��սʿ����ʦ����ʿ���̿�<br/>
-<img src="Images/biqi.jpg" title="������ڽ�ͼ"><br/>
-<img src="Images/fashi.jpg" title="��ʦ��ͼ"><br/>
-<img src="Images/cike.jpg" title="�̿ͽ�ͼ"><br/>
+- 含了四个职业：战士、法师、道士、刺客<br/>
+<img src="Images/biqi.jpg" title="比奇城内截图"><br/>
+<img src="Images/fashi.jpg" title="法师截图"><br/>
+<img src="Images/cike.jpg" title="刺客截图"><br/>
 	
-- ���ܷḻ��ƽ��ÿ��ְҵ�� 38 ������<br/>
-<img src="Images/lianyue.jpg" title="���½�����ͼ"><br/>
+- 技能丰富，平均每个职业有 38 个技能<br/>
+<img src="Images/lianyue.jpg" title="莲月剑法截图"><br/>
 
 
-- ��ͼ�͵��߼���ḻ���浽 100��ûѹ����
+- 地图和道具及其丰富，玩到五转100级没压力；
 
-- �������������� 3���Ժ󣬻���ͨ������ߵȼ�������һֱ���� 6����
+- 技能正常修炼到3级以后，还可通过打出高等级技能书一直升到 6级；
 
-- ���������ξ��ɾ�����Ʒ�ʸߵ�װ����������Ҳ���ߣ�
+- 武器和首饰均可精炼，品质高的装备精炼上限也更高；
 
-- ��ʦ�г����ʿ�ĳ�����߿���������ȼ����������Է������ǳ�ʵ�ã�
+- 武器除了普通精炼外，还增加了大师精炼、特殊精炼、深虎滩精炼，打造自己的专属武器！
 
-- ��ɱ�����Ʒ�֮�࣬���ܵȼ�Խ�ߣ���ɱ�����Ĺ���Խ�죬ˬ֮��ˬ��
+- 法师招宠与道士的宠物最高可升至暗金等级，各项属性翻倍，非常实用；
 
-### ֧�ֶ�ƽ̨����
+- 刺杀剑术破防之余，技能等级越高，刺杀剑术的攻速越快，爽之又爽；
 
-�����֧���� Linux��Windows��Docker ƽ̨�ϲ���
+- 法师四大元素各有特色：**火系攻速快、风系破防、雷系广覆盖、冰系减速**。
 
-<img src="Images/docker.jpg" title="Docker ���н�ͼ">
+### 支持多平台部署
+
+服务端支持在 Linux、Windows、Docker 平台上部署。
+
+<img src="Images/docker.jpg" title="Docker 运行截图">
 <br/>
 	
-### ��ݴ���
+### 便捷传送
 
-ÿ������ʯ�����Է���ش��͵������ͼ��<br/>
-<img src="Images/chuansong.jpg" title="Docker ���н�ͼ">
+每个传送石都可以方便地传送到任意地图。<br/>
+<img src="Images/chuansong.jpg" title="Docker 运行截图">
 <br/>
 
-## �ͻ��� ����ָ��
+## 客户端 运行指南
 
-### ע��
+### 注意
 
-- ֱ�����пͻ��˻���ͨ�� [������](https://gitee.com/raphaelcheung/zircon-legend-launcher) ���ж���������������Ϸ��
+- 直接运行客户端或者通过 [启动器](https://github.com/raphaelcheung/zircon-legend-laucher) 运行都可以正常进入游戏。
 
-- �����Ҫ�ͻ����Զ����£������ͨ�� [������](https://gitee.com/raphaelcheung/zircon-legend-launcher) ��������
+- 如果需要客户端自动更新，则必须通过 [启动器](https://github.com/raphaelcheung/zircon-legend-laucher) 来启动。
 
-### ���������ļ�
+### 下载运行文件
 
-�����˺�����ͼ�͵�����Դ��ѹ�������� 3GB ��С��ֻ��ͨ���ٶ�������������
+包含了海量地图和道具资源，压缩后仍有 3GB 大小，只能通过百度网盘来分享。
 
-��[�ٶ�����](https://pan.baidu.com/s/1dKrpu6G4p4klMVOIMuhOdA?pwd=j1rm)��
+【[百度网盘](https://pan.baidu.com/s/1dKrpu6G4p4klMVOIMuhOdA?pwd=j1rm)】
 
-����Ӱٶ�����̫�������������Ҳ�ŵ��� QQ Ⱥ�ļ��У���[QQȺ��915941142](https://qm.qq.com/q/JeoJOJ4z4e)��
+如果嫌百度网盘太慢，这份数据我也放到了 QQ 群文件中，【[QQ群：915941142](https://qm.qq.com/q/JeoJOJ4z4e)】
 
-**�����ļ��а����˴��������������ͼ����Դ������ѧϰ��Ϸ�������������ڷǷ���;��**
+**运行文件中包含了大量来自于网络的图形资源，仅供学习游戏技术，请勿用于非法用途！**
 
-### ��װ�������
+### 安装依赖组件
 
 - .Net Framework 4.8
 
 - DirectX 9.0
 
-- C++ ���п� ������Ŀ��ֱ��������ֻ�� SlimDX ���������鰲װ�ϼ���QQȺ�ļ����ṩ��
+- C++ 运行库 （本项目不直接依赖，只是 SlimDX 依赖，建议安装合集，QQ群文件有提供）
 
-### ����ִ���ļ�
+### 下载执行文件
 
-�ӱ���Ŀ [����ҳ��](https://gitee.com/raphaelcheung/zircon-legend-client/releases) �������µ������ļ�����ǰ�������ص����������ļ���ѹ��ͬһĿ¼��
+从本项目 [发布页面](https://github.com/raphaelcheung/zircon-legend-client/releases) 下载最新的运行文件，与前面已下载的依赖数据文件解压到同一目录。
 
-�����Լ�������޸�` Legend.ini `�еķ�������ַ���˿ڡ�
+根据自己的情况修改` Legend.ini `中的服务器地址、端口。
 
-## �ͻ��������� ����ָ��
+## 客户端启动器 运行指南
 
-�μ���Ŀ ��[ZirconLegend-Client](https://gitee.com/raphaelcheung/zircon-legend-launcher)��
+参见项目 【[ZirconLegend-Client](https://github.com/raphaelcheung/zircon-legend-laucher)】
 
-## ������ ����ָ��
+## 服务器 部署指南
 
-�μ���Ŀ ��[ZirconLegend-Server](https://gitee.com/raphaelcheung/zircon-legend-server)��
+参见项目 【[ZirconLegend-Server](https://github.com/raphaelcheung/zircon-legend-server)】
 
-## �ͻ��� �������
+## 客户端 代码编译
 
-��������������
+开发环境依赖：
 
 - Microsoft Visual Studio Community 2022
 
 - .Net Framework 4.8
 
-����ʱ��������
+运行时还依赖：
 
 - DirectX 9.0
 
-��װ��Щ����ȡȫ����룬��ȡ��ʱ��Ҫѡ��` Recursive `���������ܰ���ģ��һ����ȡ������
+安装这些后拉取全库代码，拉取的时候要选中` Recursive `。这样才能把子模块一并拉取下来。
 
-���ɴ��ڳ�������״̬���Ƽ���ȡ�����汾��<br/>
-<img src="Images/������ȡ.jpg" title="��ȡ����"><br/>
+主干处于持续开发状态，推荐拉取发布版本。<br/>
+<img src="Images/代码拉取.jpg" title="拉取代码"><br/>
 
-���������������ģ�飬
-Ҳ����ȥ�ѡ�[ZirconLegend-Library](https://gitee.com/raphaelcheung/zircon-legend-library)����������
-Ȼ���ƶ���` Library `Ŀ¼�¡�
+如果还是拉不下子模块，
+也可以去把【[ZirconLegend-Library](https://github.com/raphaelcheung/zircon-legend-library)】拉下来，
+然后移动到` Library `目录下。
 
-��Ŀ�ı�����������Ԥ��ã�ֱ�ӱ��뼴�ɡ�
+项目的编译依赖都已预设好，直接编译即可。
