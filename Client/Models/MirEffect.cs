@@ -42,7 +42,7 @@ namespace Client.Models
                 if (_DrawX == value) return;
 
                 _DrawX = value;
-                GameScene.Game.MapControl.TextureValid = false;
+                InvalidateMap();
             }
         }
         private int _DrawX;
@@ -53,9 +53,9 @@ namespace Client.Models
             set
             {
                 if (_DrawY == value) return;
-                
+
                 _DrawY = value;
-                GameScene.Game.MapControl.TextureValid = false;
+                InvalidateMap();
             }
         }
         private int _DrawY;
@@ -66,13 +66,24 @@ namespace Client.Models
             set
             {
                 if (_DrawFrmae == value) return;
-                
+
                 _DrawFrmae = value;
-                GameScene.Game.MapControl.TextureValid = false;
+                InvalidateMap();
                 FrameAction?.Invoke();
             }
         }
         private int _DrawFrmae;
+
+        private bool _InitialDraw = true;
+
+        private void InvalidateMap()
+        {
+            if (_InitialDraw || !Loop)
+            {
+                _InitialDraw = false;
+                GameScene.Game.MapControl.TextureValid = false;
+            }
+        }
 
         public DrawType DrawType = DrawType.Object;
 

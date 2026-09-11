@@ -389,18 +389,65 @@ namespace Client.Scenes.Views
             OnAfterDraw();
         }
 
+        private List<MapObject>[] _ObjectBuckets;
+        private List<MirEffect>[] _EffectBuckets;
+
         private void DrawObjects()
         {
             int minX = Math.Max(0, User.CurrentLocation.X - OffSetX - 4), maxX = Math.Min(Width - 1, User.CurrentLocation.X + OffSetX + 4);
             int minY = Math.Max(0, User.CurrentLocation.Y - OffSetY - 4), maxY = Math.Min(Height - 1, User.CurrentLocation.Y + OffSetY + 25);
 
+            int rowCount = maxY - minY + 1;
+            int minDrawX = -(CellWidth * 16);
+            int maxDrawX = ((OffSetX * 2) + 16) * CellWidth;
 
-            for (int y = minY; y <= maxY; y++)
+            if (_ObjectBuckets == null || _ObjectBuckets.Length < rowCount)
+                _ObjectBuckets = new List<MapObject>[rowCount];
+            if (_EffectBuckets == null || _EffectBuckets.Length < rowCount)
+                _EffectBuckets = new List<MirEffect>[rowCount];
+
+            for (int i = 0; i < rowCount; i++)
             {
-                foreach (MapObject ob in Objects)
+                _ObjectBuckets[i]?.Clear();
+                _EffectBuckets[i]?.Clear();
+            }
+
+            foreach (MapObject ob in Objects)
+            {
+                int renderY = ob.RenderY;
+                if (renderY < minY || renderY > maxY) continue;
+                if (ob.DrawX < minDrawX || ob.DrawX > maxDrawX) continue;
+
+                int index = renderY - minY;
+                if (_ObjectBuckets[index] == null) _ObjectBuckets[index] = new List<MapObject>();
+                _ObjectBuckets[index].Add(ob);
+            }
+
+            if (Config.DrawEffects)
+            {
+                foreach (MirEffect ob in Effects)
                 {
-                    if (ob.RenderY == y && ob.Dead)
-                        ob.Draw();
+                    if (ob.DrawType != DrawType.Object || ob.Target == null || ob.Target == User) continue;
+
+                    int renderY = ob.Target.RenderY;
+                    if (renderY < minY || renderY > maxY) continue;
+                    if (ob.DrawX < minDrawX || ob.DrawX > maxDrawX) continue;
+
+                    int index = renderY - minY;
+                    if (_EffectBuckets[index] == null) _EffectBuckets[index] = new List<MirEffect>();
+                    _EffectBuckets[index].Add(ob);
+                }
+            }
+
+            for (int i = 0; i < rowCount; i++)
+            {
+                List<MapObject> bucket = _ObjectBuckets[i];
+                if (bucket == null) continue;
+
+                for (int j = 0; j < bucket.Count; j++)
+                {
+                    if (bucket[j].Dead)
+                        bucket[j].Draw();
                 }
             }
 
@@ -465,20 +512,25 @@ namespace Client.Scenes.Views
                     }
                 }
 
-                foreach (MapObject ob in Objects)
+                int rowIndex = y - minY;
+
+                List<MapObject> rowObjects = _ObjectBuckets[rowIndex];
+                if (rowObjects != null)
                 {
-                    if (ob.RenderY == y && !ob.Dead)
-                        ob.Draw();
+                    for (int j = 0; j < rowObjects.Count; j++)
+                    {
+                        if (!rowObjects[j].Dead)
+                            rowObjects[j].Draw();
+                    }
                 }
 
                 if (Config.DrawEffects)
                 {
-                    foreach (MirEffect ob in Effects)
+                    List<MirEffect> rowEffects = _EffectBuckets[rowIndex];
+                    if (rowEffects != null)
                     {
-                        if (ob.DrawType != DrawType.Object) continue;
-
-                        if (ob.Target != null && ob.Target.RenderY == y && ob.Target != User)
-                            ob.Draw();
+                        for (int j = 0; j < rowEffects.Count; j++)
+                            rowEffects[j].Draw();
                     }
                 }
             }
