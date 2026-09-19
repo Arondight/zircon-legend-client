@@ -418,15 +418,14 @@ namespace Client.Scenes
                 ConnectionBox = null;
             }
 
-            if (!CEnvir.IsQuickGame)
-            {
-                if (!CheckDbVersion()) return;
+            // 无论是否 -QuickGame 自动登录，都要先同步服务器的 System.db，
+            // 否则客户端使用旧物品库，遇到服务器新物品时会因 Item.Info == null 而崩溃。
+            if (!CheckDbVersion()) return;
 
-                if (CheckDbBox != null)
-                {
-                    CheckDbBox.Dispose();
-                    CheckDbBox = null;
-                }
+            if (CheckDbBox != null)
+            {
+                CheckDbBox.Dispose();
+                CheckDbBox = null;
             }
 
 
